@@ -91,7 +91,7 @@ def upscale(kind: str, obj):
     try:
         original_replicas = int(
             obj.metadata.annotations['kubescaledown/originalReplicas'])
-    except:
+    except IndexError:
         return
 
     # Remove the annotation, and scale back up
