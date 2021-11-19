@@ -23,7 +23,7 @@ def annotate(kind: str, name: str, namespace: str, value: str):
                 )
             except ApiException as e:
                 print(
-                    "Exception when calling AppsV1Api->patch_namespaced_deployment: %s\n" % e)
+                    f"Exception when calling AppsV1Api->patch_namespaced_deployment: {e}\n")
         case "StatefulSet":
             try:
                 resp = apps_v1.patch_namespaced_stateful_set(
@@ -31,7 +31,7 @@ def annotate(kind: str, name: str, namespace: str, value: str):
                 )
             except ApiException as e:
                 print(
-                    "Exception when calling AppsV1Api->patch_namespaced_stateful_set: %s\n" % e)
+                    f"Exception when calling AppsV1Api->patch_namespaced_stateful_set: {e}\n")
 
     return resp
 
@@ -53,7 +53,7 @@ def scale(kind: str, name: str, namespace: str, from_replicas: int, to_replicas:
                 )
             except ApiException as e:
                 print(
-                    "Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
+                    f"Exception when calling AppsV1Api->patch_namespaced_deployment_scale: {e}\n")
         case "StatefulSet":
             try:
                 resp = apps_v1.patch_namespaced_stateful_set_scale(
@@ -61,7 +61,7 @@ def scale(kind: str, name: str, namespace: str, from_replicas: int, to_replicas:
                 )
             except ApiException as e:
                 print(
-                    "Exception when calling AppsV1Api->patch_namespaced_stateful_set_scale: %s\n" % e)
+                    f"Exception when calling AppsV1Api->patch_namespaced_stateful_set_scale: {e}\n")
 
     return resp
 
@@ -132,14 +132,14 @@ if __name__ == '__main__':
                     namespace=args.namespace)
             except ApiException as e:
                 print(
-                    "Exception when calling AppsV1Api->list_namespaced_deployment: %s\n" % e)
+                    f"Exception when calling AppsV1Api->list_namespaced_deployment: {e}\n")
         if args.statefulsets:
             try:
                 statefulsets = apps_v1.list_namespaced_stateful_set(
                     namespace=args.namespace)
             except ApiException as e:
                 print(
-                    "Exception when calling AppsV1Api->list_namespaced_stateful_set: %s\n" % e)
+                    f"Exception when calling AppsV1Api->list_namespaced_stateful_set: {e}\n")
     else:
         # do global
         if args.deployments:
@@ -147,13 +147,13 @@ if __name__ == '__main__':
                 deployments = apps_v1.list_deployment_for_all_namespaces()
             except ApiException as e:
                 print(
-                    "Exception when calling AppsV1Api->list_deployment_for_all_namespaces: %s\n" % e)
+                    f"Exception when calling AppsV1Api->list_deployment_for_all_namespaces: {e}\n")
         if args.statefulsets:
             try:
                 statefulsets = apps_v1.list_stateful_set_for_all_namespaces()
             except ApiException as e:
                 print(
-                    "Exception when calling AppsV1Api->list_stateful_set_for_all_namespaces: %s\n" % e)
+                    f"Exception when calling AppsV1Api->list_stateful_set_for_all_namespaces: {e}\n")
 
     if args.up:
         if args.deployments:
