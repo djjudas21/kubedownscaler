@@ -1,13 +1,20 @@
+"""
+Scale down Kubernetes Deployments and Statefulsets
+and restore them to their original scale
+"""
+
 import argparse
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
 
 def annotate(kind: str, name: str, namespace: str, value: str):
-
+    '''
+    Annotate a kube resource with its original number of replicas
+    '''
     body = {"metadata": {"annotations": {
         'kubescaledown/originalReplicas': str(value)}}}
-    
+
     match kind:
         case "Deployment":
             try:
@@ -15,23 +22,28 @@ def annotate(kind: str, name: str, namespace: str, value: str):
                     name=name, namespace=namespace, body=body
                 )
             except ApiException as e:
-                print("Exception when calling AppsV1Api->patch_namespaced_deployment: %s\n" % e)
+                print(
+                    "Exception when calling AppsV1Api->patch_namespaced_deployment: %s\n" % e)
         case "StatefulSet":
             try:
                 resp = apps_v1.patch_namespaced_stateful_set(
                     name=name, namespace=namespace, body=body
                 )
             except ApiException as e:
-                print("Exception when calling AppsV1Api->patch_namespaced_stateful_set: %s\n" % e)
+                print(
+                    "Exception when calling AppsV1Api->patch_namespaced_stateful_set: %s\n" % e)
 
     return resp
 
 
-def scale(kind: str, name: str, namespace: str, fromReplicas: int, toReplicas: int):
+def scale(kind: str, name: str, namespace: str, from_replicas: int, to_replicas: int):
+    '''
+    Scale a kube resource to a new number of replicas
+    '''
+    print(
+        f"Scaling {kind} {namespace}/{name} from {from_replicas} to {to_replicas} replicas")
 
-    print(f"Scaling {kind} {namespace}/{name} from {fromReplicas} to {toReplicas} replicas")
-
-    body = {"spec": {"replicas": toReplicas}}
+    body = {"spec": {"replicas": to_replicas}}
 
     match kind:
         case "Deployment":
@@ -40,23 +52,27 @@ def scale(kind: str, name: str, namespace: str, fromReplicas: int, toReplicas: i
                     name=name, namespace=namespace, body=body
                 )
             except ApiException as e:
-                print("Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
+                print(
+                    "Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
         case "StatefulSet":
             try:
                 resp = apps_v1.patch_namespaced_stateful_set_scale(
                     name=name, namespace=namespace, body=body
                 )
             except ApiException as e:
-                print("Exception when calling AppsV1Api->patch_namespaced_stateful_set_scale: %s\n" % e)
+                print(
+                    "Exception when calling AppsV1Api->patch_namespaced_stateful_set_scale: %s\n" % e)
 
     return resp
 
 
-
-def down(kind: str, object):
+def downscale(kind: str, obj):
+    '''
+    Handle the downscaling of an object
+    '''
     # Grab some info from the deployment
-    namespace = object.metadata.namespace
-    name = object.metadata.name
+    namespace = obj.metadata.namespace
+    name = obj.metadata.name
     replicas = int(deployment.spec.replicas)
 
     if replicas != 0 and not args.dry_run:
@@ -64,38 +80,43 @@ def down(kind: str, object):
         scale(kind, name, namespace, replicas, 0)
 
 
-def up(kind: str, object):
+def upscale(kind: str, obj):
+    '''
+    Handle the upscaling of an object
+    '''
     # Grab some info from the deployment
-    namespace = object.metadata.namespace
-    name = object.metadata.name
-    replicas = int(object.spec.replicas)
+    namespace = obj.metadata.namespace
+    name = obj.metadata.name
+    replicas = int(obj.spec.replicas)
     try:
-        originalReplicas = int(
-            object.metadata.annotations['kubescaledown/originalReplicas'])
+        original_replicas = int(
+            obj.metadata.annotations['kubescaledown/originalReplicas'])
     except:
         return
 
     # Remove the annotation, and scale back up
-    if replicas != originalReplicas and not args.dry_run:
+    if replicas != original_replicas and not args.dry_run:
         annotate(kind, name, namespace, '')
-        scale(kind, name, namespace, replicas, originalReplicas)
+        scale(kind, name, namespace, replicas, original_replicas)
 
 
 if __name__ == '__main__':
-    pass
 
     # Read in args
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-d', '--down',
-                        help="scale down cluster resources", action='store_true')
+                       help="scale down cluster resources", action='store_true')
     group.add_argument('-u', '--up',
-                        help="scale up to restore state", action='store_true')
-    parser.add_argument('--dry-run', help="don't actually scale anything", action='store_true')
+                       help="scale up to restore state", action='store_true')
+    parser.add_argument(
+        '--dry-run', help="don't actually scale anything", action='store_true')
     parser.add_argument('-n', '--namespace',
                         help="namespace to operate on", type=str)
-    parser.add_argument("--deployments", help="scale Deployments", default=True, action=argparse.BooleanOptionalAction)
-    parser.add_argument("--statefulsets", help="scale StatefulSets", default=True, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--deployments", help="scale Deployments",
+                        default=True, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--statefulsets", help="scale StatefulSets",
+                        default=True, action=argparse.BooleanOptionalAction)
     args = parser.parse_args()
 
     # connect to cluster
@@ -137,14 +158,14 @@ if __name__ == '__main__':
     if args.up:
         if args.deployments:
             for deployment in deployments.items:
-               up("Deployment", deployment)
+                upscale("Deployment", deployment)
         if args.statefulsets:
             for statefulset in statefulsets.items:
-                up("StatefulSet", statefulset)
+                upscale("StatefulSet", statefulset)
     elif args.down:
         if args.deployments:
             for deployment in deployments.items:
-                down("Deployment", deployment)
+                downscale("Deployment", deployment)
         if args.statefulsets:
             for statefulset in statefulsets.items:
-                down("StatefulSet", statefulset)
+                downscale("StatefulSet", statefulset)
