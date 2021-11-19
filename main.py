@@ -34,10 +34,12 @@ if __name__ == '__main__':
 
     # Read in args
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--restore',
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-d', '--down',
+                        help="scale down cluster resources", action='store_true')
+    group.add_argument('-u', '--up',
                         help="scale up to restore state", action='store_true')
-    parser.add_argument(
-        '-d', '--dry-run', help="don't actually scale anything", action='store_true')
+    parser.add_argument('--dry-run', help="don't actually scale anything", action='store_true')
     parser.add_argument('-n', '--namespace',
                         help="namespace to operate on", type=str)
     args = parser.parse_args()
@@ -63,7 +65,7 @@ if __name__ == '__main__':
             print(
                 "Exception when calling AppsV1Api->list_deployment_for_all_namespaces: %s\n" % e)
 
-    if args.restore:
+    if args.up:
         for deployment in deployments.items:
             # Grab some info from the deployment
             namespace = deployment.metadata.namespace
@@ -85,7 +87,7 @@ if __name__ == '__main__':
             if not args.dry_run:
                 annotate(name, namespace, '')
                 scale(name, namespace, originalReplicas)
-    else:
+    elif args.down:
         for deployment in deployments.items:
             # Grab some info from the deployment
             namespace = deployment.metadata.namespace
