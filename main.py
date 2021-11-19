@@ -53,11 +53,10 @@ def scale(kind: str, name: str, namespace: str, fromReplicas: int, toReplicas: i
 
 
 
-def down(kind, object):
+def down(kind: str, object):
     # Grab some info from the deployment
     namespace = object.metadata.namespace
     name = object.metadata.name
-    #kind = object.kind
     replicas = int(deployment.spec.replicas)
 
     if replicas != 0 and not args.dry_run:
@@ -65,11 +64,10 @@ def down(kind, object):
         scale(kind, name, namespace, replicas, 0)
 
 
-def up(kind, object):
+def up(kind: str, object):
     # Grab some info from the deployment
     namespace = object.metadata.namespace
     name = object.metadata.name
-    #kind = object.kind
     replicas = int(object.spec.replicas)
     try:
         originalReplicas = int(
