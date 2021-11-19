@@ -3,23 +3,28 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
 
-def annotate(name, namespace, value):
+def annotate(name: str, namespace: str, value: str):
 
     body = {"metadata": {"annotations": {
         'kubescaledown/originalReplicas': str(value)}}}
-    resp = apps_v1.patch_namespaced_deployment(
-        name=name, namespace=namespace, body=body
-    )
-
+    try:
+        resp = apps_v1.patch_namespaced_deployment(
+            name=name, namespace=namespace, body=body
+        )
+    except ApiException as e:
+        print("Exception when calling AppsV1Api->patch_namespaced_deployment: %s\n" % e)
     return resp
 
 
 def scale(name: str, namespace: str, replicas: int):
 
     body = {"spec": {"replicas": replicas}}
-    resp = apps_v1.patch_namespaced_deployment_scale(
-        name=name, namespace=namespace, body=body
-    )
+    try:
+        resp = apps_v1.patch_namespaced_deployment_scale(
+            name=name, namespace=namespace, body=body
+        )
+    except ApiException as e:
+        print("Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
 
     return resp
 
