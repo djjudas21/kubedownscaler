@@ -42,6 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--dry-run', help="don't actually scale anything", action='store_true')
     parser.add_argument('-n', '--namespace',
                         help="namespace to operate on", type=str)
+    parser.add_argument("--deployments", help="scale deployments", default=True, action=argparse.BooleanOptionalAction)
     args = parser.parse_args()
 
     # connect to cluster
@@ -51,54 +52,58 @@ if __name__ == '__main__':
     # Determine whether namespaced or global, and fetch list of Deployments
     if args.namespace:
         # do namespaced
-        try:
-            deployments = apps_v1.list_namespaced_deployment(
-                namespace=args.namespace)
-        except ApiException as e:
-            print(
-                "Exception when calling AppsV1Api->list_namespaced_deployment: %s\n" % e)
+        if args.deployments:
+            try:
+                deployments = apps_v1.list_namespaced_deployment(
+                    namespace=args.namespace)
+            except ApiException as e:
+                print(
+                    "Exception when calling AppsV1Api->list_namespaced_deployment: %s\n" % e)
     else:
         # do global
-        try:
-            deployments = apps_v1.list_deployment_for_all_namespaces()
-        except ApiException as e:
-            print(
-                "Exception when calling AppsV1Api->list_deployment_for_all_namespaces: %s\n" % e)
+        if args.deployments:
+            try:
+                deployments = apps_v1.list_deployment_for_all_namespaces()
+            except ApiException as e:
+                print(
+                    "Exception when calling AppsV1Api->list_deployment_for_all_namespaces: %s\n" % e)
 
     if args.up:
-        for deployment in deployments.items:
-            # Grab some info from the deployment
-            namespace = deployment.metadata.namespace
-            name = deployment.metadata.name
-            replicas = int(deployment.spec.replicas)
-            try:
-                originalReplicas = int(
-                    deployment.metadata.annotations['kubescaledown/originalReplicas'])
-            except:
-                continue
+        if args.deployments:
+            for deployment in deployments.items:
+                # Grab some info from the deployment
+                namespace = deployment.metadata.namespace
+                name = deployment.metadata.name
+                replicas = int(deployment.spec.replicas)
+                try:
+                    originalReplicas = int(
+                        deployment.metadata.annotations['kubescaledown/originalReplicas'])
+                except:
+                    continue
 
-            print(
-                f"Scaling {namespace}/{name} from {replicas} to {originalReplicas} replicas")
+                print(
+                    f"Scaling {namespace}/{name} from {replicas} to {originalReplicas} replicas")
 
-            if replicas == originalReplicas:
-                continue
+                if replicas == originalReplicas:
+                    continue
 
-            # Remove the annotation, and scale back up
-            if not args.dry_run:
-                annotate(name, namespace, '')
-                scale(name, namespace, originalReplicas)
+                # Remove the annotation, and scale back up
+                if not args.dry_run:
+                    annotate(name, namespace, '')
+                    scale(name, namespace, originalReplicas)
     elif args.down:
-        for deployment in deployments.items:
-            # Grab some info from the deployment
-            namespace = deployment.metadata.namespace
-            name = deployment.metadata.name
-            replicas = int(deployment.spec.replicas)
+        if args.deployments:
+            for deployment in deployments.items:
+                # Grab some info from the deployment
+                namespace = deployment.metadata.namespace
+                name = deployment.metadata.name
+                replicas = int(deployment.spec.replicas)
 
-            if replicas == 0:
-                continue
+                if replicas == 0:
+                    continue
 
-            print(f"Scaling {namespace}/{name} from {replicas} to 0 replicas")
+                print(f"Scaling {namespace}/{name} from {replicas} to 0 replicas")
 
-            if not args.dry_run:
-                annotate(name, namespace, replicas)
-                scale(name, namespace, 0)
+                if not args.dry_run:
+                    annotate(name, namespace, replicas)
+                    scale(name, namespace, 0)
