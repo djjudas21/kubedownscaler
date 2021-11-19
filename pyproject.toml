@@ -10,6 +10,7 @@ kubernetes = "^19.15.0"
 argparse = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
+autopep8 = "^1.6.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
