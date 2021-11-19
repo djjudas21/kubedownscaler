@@ -82,8 +82,9 @@ if __name__ == '__main__':
                 continue
 
             # Remove the annotation, and scale back up
-            annotate(name, namespace, '')
-            scale(name, namespace, originalReplicas)
+            if not args.dry_run:
+                annotate(name, namespace, '')
+                scale(name, namespace, originalReplicas)
     else:
         for deployment in deployments.items:
             # Grab some info from the deployment
@@ -96,5 +97,6 @@ if __name__ == '__main__':
 
             print(f"Scaling {namespace}/{name} from {replicas} to 0 replicas")
 
-            annotate(name, namespace, replicas)
-            scale(name, namespace, 0)
+            if not args.dry_run:
+                annotate(name, namespace, replicas)
+                scale(name, namespace, 0)
