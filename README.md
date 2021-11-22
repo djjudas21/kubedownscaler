@@ -1,11 +1,13 @@
 # kubedownscaler
 
-Scales down all Deployments and StatefulSets to 0, keeps note of the number of replicas in annotations,
-and scales everything back up to the original number of replicas.
+Scales down Kubernetes Deployments and StatefulSets to 0 replicas, keeps note of the number
+of replicas in annotations, and scales everything back up to the original number of replicas.
+
+Can operate on a single namespace, or the entire cluster.
 
 Ideal for performing a controlled shutdown, maintenance, etc.
 
-Uses whatever context your local kubectl has
+Uses whatever context your local `kubectl` has.
 
 ## Install
 
