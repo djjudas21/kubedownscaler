@@ -8,7 +8,7 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
 
-def annotate(kind: str, name: str, namespace: str, value: str):
+def annotate(api, kind: str, name: str, namespace: str, value: str):
     '''
     Annotate a kube resource with its original number of replicas
     '''
@@ -18,7 +18,7 @@ def annotate(kind: str, name: str, namespace: str, value: str):
     match kind:
         case "Deployment":
             try:
-                resp = apps_v1.patch_namespaced_deployment(
+                resp = api.patch_namespaced_deployment(
                     name=name, namespace=namespace, body=body
                 )
             except ApiException as e:
@@ -26,7 +26,7 @@ def annotate(kind: str, name: str, namespace: str, value: str):
                     f"Exception when calling AppsV1Api->patch_namespaced_deployment: {e}\n")
         case "StatefulSet":
             try:
-                resp = apps_v1.patch_namespaced_stateful_set(
+                resp = api.patch_namespaced_stateful_set(
                     name=name, namespace=namespace, body=body
                 )
             except ApiException as e:
@@ -36,7 +36,8 @@ def annotate(kind: str, name: str, namespace: str, value: str):
     return resp
 
 
-def scale(kind: str, name: str, namespace: str, from_replicas: int, to_replicas: int):
+# pylint: disable=too-many-arguments
+def scale(api, kind: str, name: str, namespace: str, from_replicas: int, to_replicas: int):
     '''
     Scale a kube resource to a new number of replicas
     '''
@@ -48,7 +49,7 @@ def scale(kind: str, name: str, namespace: str, from_replicas: int, to_replicas:
     match kind:
         case "Deployment":
             try:
-                resp = apps_v1.patch_namespaced_deployment_scale(
+                resp = api.patch_namespaced_deployment_scale(
                     name=name, namespace=namespace, body=body
                 )
             except ApiException as e:
@@ -56,7 +57,7 @@ def scale(kind: str, name: str, namespace: str, from_replicas: int, to_replicas:
                     f"Exception when calling AppsV1Api->patch_namespaced_deployment_scale: {e}\n")
         case "StatefulSet":
             try:
-                resp = apps_v1.patch_namespaced_stateful_set_scale(
+                resp = api.patch_namespaced_stateful_set_scale(
                     name=name, namespace=namespace, body=body
                 )
             except ApiException as e:
@@ -66,21 +67,21 @@ def scale(kind: str, name: str, namespace: str, from_replicas: int, to_replicas:
     return resp
 
 
-def downscale(kind: str, obj):
+def downscale(api, kind: str, obj):
     '''
     Handle the downscaling of an object
     '''
     # Grab some info from the deployment
     namespace = obj.metadata.namespace
     name = obj.metadata.name
-    replicas = int(deployment.spec.replicas)
+    replicas = int(obj.spec.replicas)
 
     if replicas != 0 and not args.dry_run:
-        annotate(kind, name, namespace, replicas)
-        scale(kind, name, namespace, replicas, 0)
+        annotate(api, kind, name, namespace, replicas)
+        scale(api, kind, name, namespace, replicas, 0)
 
 
-def upscale(kind: str, obj):
+def upscale(api, kind: str, obj):
     '''
     Handle the upscaling of an object
     '''
@@ -96,28 +97,14 @@ def upscale(kind: str, obj):
 
     # Remove the annotation, and scale back up
     if replicas != original_replicas and not args.dry_run:
-        annotate(kind, name, namespace, '')
-        scale(kind, name, namespace, replicas, original_replicas)
+        annotate(api, kind, name, namespace, '')
+        scale(api, kind, name, namespace, replicas, original_replicas)
 
-
-def main():
-
-    # Read in args
-    parser = argparse.ArgumentParser()
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-d', '--down',
-                       help="scale down cluster resources", action='store_true')
-    group.add_argument('-u', '--up',
-                       help="scale up to restore state", action='store_true')
-    parser.add_argument(
-        '--dry-run', help="don't actually scale anything", action='store_true')
-    parser.add_argument('-n', '--namespace',
-                        help="namespace to operate on", type=str)
-    parser.add_argument("--deployments", help="scale Deployments",
-                        default=True, action=argparse.BooleanOptionalAction)
-    parser.add_argument("--statefulsets", help="scale StatefulSets",
-                        default=True, action=argparse.BooleanOptionalAction)
-    args = parser.parse_args()
+# pylint: disable=too-many-branches
+def main(args):
+    """
+    Main function
+    """
 
     # connect to cluster
     config.load_kube_config()
@@ -158,17 +145,35 @@ def main():
     if args.up:
         if args.deployments:
             for deployment in deployments.items:
-                upscale("Deployment", deployment)
+                upscale(apps_v1, "Deployment", deployment)
         if args.statefulsets:
             for statefulset in statefulsets.items:
-                upscale("StatefulSet", statefulset)
+                upscale(apps_v1, "StatefulSet", statefulset)
     elif args.down:
         if args.deployments:
             for deployment in deployments.items:
-                downscale("Deployment", deployment)
+                downscale(apps_v1, "Deployment", deployment)
         if args.statefulsets:
             for statefulset in statefulsets.items:
-                downscale("StatefulSet", statefulset)
+                downscale(apps_v1, "StatefulSet", statefulset)
 
 if __name__ == '__main__':
-    main()
+
+    # Read in args
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-d', '--down',
+                       help="scale down cluster resources", action='store_true')
+    group.add_argument('-u', '--up',
+                       help="scale up to restore state", action='store_true')
+    parser.add_argument(
+        '--dry-run', help="don't actually scale anything", action='store_true')
+    parser.add_argument('-n', '--namespace',
+                        help="namespace to operate on", type=str)
+    parser.add_argument("--deployments", help="scale Deployments",
+                        default=True, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--statefulsets", help="scale StatefulSets",
+                        default=True, action=argparse.BooleanOptionalAction)
+    args = parser.parse_args()
+
+    main(args)
