@@ -1,8 +1,19 @@
 [tool.poetry]
 name = "kubedownscaler"
-version = "0.1.0"
-description = "Scale down and restore deployments and statefulsets"
+version = "0.0.0"
+description = "Scale down and restore Kubernetes deployments and statefulsets"
 authors = ["Jonathan Gazeley <me@jonathangazeley.com>"]
+readme = "README.md"
+repository = "https://github.com/djjudas21/kubedownscaler"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+    "Topic :: Utilities"
+]
+
+[tool.poetry.scripts]
+script_name = 'kubedownscaler:main'
 
 [tool.poetry.dependencies]
 python = "^3.10"
