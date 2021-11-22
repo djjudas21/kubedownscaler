@@ -67,7 +67,7 @@ def scale(api, kind: str, name: str, namespace: str, from_replicas: int, to_repl
     return resp
 
 
-def downscale(api, kind: str, obj):
+def downscale(api, kind: str, obj, dry_run: bool):
     '''
     Handle the downscaling of an object
     '''
@@ -76,12 +76,12 @@ def downscale(api, kind: str, obj):
     name = obj.metadata.name
     replicas = int(obj.spec.replicas)
 
-    if replicas != 0 and not args.dry_run:
+    if replicas != 0 and not dry_run:
         annotate(api, kind, name, namespace, replicas)
         scale(api, kind, name, namespace, replicas, 0)
 
 
-def upscale(api, kind: str, obj):
+def upscale(api, kind: str, obj, dry_run: bool):
     '''
     Handle the upscaling of an object
     '''
@@ -96,15 +96,32 @@ def upscale(api, kind: str, obj):
         return
 
     # Remove the annotation, and scale back up
-    if replicas != original_replicas and not args.dry_run:
+    if replicas != original_replicas and not dry_run:
         annotate(api, kind, name, namespace, '')
         scale(api, kind, name, namespace, replicas, original_replicas)
 
 # pylint: disable=too-many-branches
-def main(args):
+def main():
     """
     Main function
     """
+
+    # Read in args
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-d', '--down',
+                       help="scale down cluster resources", action='store_true')
+    group.add_argument('-u', '--up',
+                       help="scale up to restore state", action='store_true')
+    parser.add_argument(
+        '--dry-run', help="don't actually scale anything", action='store_true')
+    parser.add_argument('-n', '--namespace',
+                        help="namespace to operate on", type=str)
+    parser.add_argument("--deployments", help="scale Deployments",
+                        default=True, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--statefulsets", help="scale StatefulSets",
+                        default=True, action=argparse.BooleanOptionalAction)
+    args = parser.parse_args()
 
     # connect to cluster
     config.load_kube_config()
@@ -145,35 +162,17 @@ def main(args):
     if args.up:
         if args.deployments:
             for deployment in deployments.items:
-                upscale(apps_v1, "Deployment", deployment)
+                upscale(apps_v1, "Deployment", deployment, args.dry_run)
         if args.statefulsets:
             for statefulset in statefulsets.items:
-                upscale(apps_v1, "StatefulSet", statefulset)
+                upscale(apps_v1, "StatefulSet", statefulset, args.dry_run)
     elif args.down:
         if args.deployments:
             for deployment in deployments.items:
-                downscale(apps_v1, "Deployment", deployment)
+                downscale(apps_v1, "Deployment", deployment, args.dry_run)
         if args.statefulsets:
             for statefulset in statefulsets.items:
-                downscale(apps_v1, "StatefulSet", statefulset)
+                downscale(apps_v1, "StatefulSet", statefulset, args.dry_run)
 
 if __name__ == '__main__':
-
-    # Read in args
-    parser = argparse.ArgumentParser()
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-d', '--down',
-                       help="scale down cluster resources", action='store_true')
-    group.add_argument('-u', '--up',
-                       help="scale up to restore state", action='store_true')
-    parser.add_argument(
-        '--dry-run', help="don't actually scale anything", action='store_true')
-    parser.add_argument('-n', '--namespace',
-                        help="namespace to operate on", type=str)
-    parser.add_argument("--deployments", help="scale Deployments",
-                        default=True, action=argparse.BooleanOptionalAction)
-    parser.add_argument("--statefulsets", help="scale StatefulSets",
-                        default=True, action=argparse.BooleanOptionalAction)
-    args = parser.parse_args()
-
-    main(args)
+    main()
