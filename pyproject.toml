@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "kubedownscaler"
-version = "0.1.0"
+version = "0.0.0"
 description = "Scale down and restore deployments and statefulsets"
 authors = ["Jonathan Gazeley <me@jonathangazeley.com>"]
 
