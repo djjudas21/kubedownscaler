@@ -7,7 +7,13 @@ Ideal for performing a controlled shutdown, maintenance, etc.
 
 Uses whatever context your local kubectl has
 
-## Usage
+## Install
+
+```sh
+pip install kubedownscaler
+```
+
+## Use
 
 Either `-d|--down` or `-u|--up` must be specified.
 
@@ -26,4 +32,12 @@ options:
                         scale Deployments (default: True)
   --statefulsets, --no-statefulsets
                         scale StatefulSets (default: True)
+```
+
+## Build
+
+```sh
+poetry install
+poetry build
+poetry publish
 ```
