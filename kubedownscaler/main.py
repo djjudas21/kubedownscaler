@@ -100,7 +100,7 @@ def upscale(kind: str, obj):
         scale(kind, name, namespace, replicas, original_replicas)
 
 
-if __name__ == '__main__':
+def main():
 
     # Read in args
     parser = argparse.ArgumentParser()
@@ -169,3 +169,6 @@ if __name__ == '__main__':
         if args.statefulsets:
             for statefulset in statefulsets.items:
                 downscale("StatefulSet", statefulset)
+
+if __name__ == '__main__':
+    main()
