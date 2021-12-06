@@ -20,7 +20,7 @@ pip install kubedownscaler
 Either `-d|--down` or `-u|--up` must be specified.
 
 ```
-usage: main.py [-h] (-d | -u) [--dry-run] [-n NAMESPACE] [--deployments | --no-deployments]
+usage: kubectl downscale [-h] (-d | -u) [--dry-run] [-n NAMESPACE] [--deployments | --no-deployments]
                [--statefulsets | --no-statefulsets]
 
 options:
