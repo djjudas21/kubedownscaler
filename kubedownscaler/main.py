@@ -121,11 +121,14 @@ def main():
                         default=True, action=argparse.BooleanOptionalAction)
     parser.add_argument("--statefulsets", help="scale StatefulSets",
                         default=True, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--storageclass", help="only scale pods that are consuming a specific storageclass",
+                        type=str)
     args = parser.parse_args()
 
     # connect to cluster
     config.load_kube_config()
     apps_v1 = client.AppsV1Api()
+    core_v1 = client.CoreV1Api()
 
     # Determine whether namespaced or global, and fetch list of Deployments
     if args.namespace:
@@ -158,6 +161,58 @@ def main():
             except ApiException as e:
                 print(
                     f"Exception when calling AppsV1Api->list_stateful_set_for_all_namespaces: {e}\n")
+
+    # remove any deployment or statefulset from the list that doesn't reference this storageclass
+    if args.storageclass:
+
+        # for deployments, get the PVCs from the Deployment and get the SC from the PVC
+        for deployment in deployments.items:
+            to_be_scaled = False
+
+            # get full deployment details
+            try:
+                deploymentspec = apps_v1.read_namespaced_deployment(name=deployment.metadata.name, namespace=deployment.metadata.namespace)
+                deploymentnamespace = deploymentspec.metadata.namespace
+            except ApiException as e:
+                print(f"Exception when calling AppsV1Api->read_namespaced_deployment: {e}\n")
+
+            # get PVCs from Deployment            
+            for volume in deploymentspec.spec.template.spec.volumes:
+                if volume.persistent_volume_claim is not None:
+
+                    # get pvc details & get storageclass
+                    try:
+                        pvc = core_v1.read_namespaced_persistent_volume_claim(volume.persistent_volume_claim.claim_name, deploymentnamespace)
+                        sc = pvc.spec.storage_class_name
+                    except ApiException as e:
+                        print(f"Exception when calling CoreV1Api->read_namespaced_persistent_volume_claim: {e}\n")
+
+                    # if storageclass is the one we're looking for, set flag
+                    if sc == args.storageclass:
+                        to_be_scaled = True
+        
+            if to_be_scaled is False:
+                deployments.items.remove(deployment)
+
+        # for statefulsets, the SC is listed directly in the statefulset
+        for statefulset in statefulsets.items:
+            to_be_scaled = False
+
+            # get statefulset details
+            try:
+                statefulsetspec = apps_v1.read_namespaced_stateful_set(name=statefulset.metadata.name, namespace=statefulset.metadata.namespace)
+            except ApiException as e:
+                print(f"Exception when calling AppsV1Api->read_namespaced_stateful_set: {e}\n")
+
+            # get storageclass
+            for volume_claim_template in statefulsetspec.spec.volume_claim_templates:
+                sc = volume_claim_template.spec.storage_class_name
+                # if storageclass is the one we're looking for, set flag
+                if sc == args.storageclass:
+                    to_be_scaled = True
+
+            if to_be_scaled is False:
+                statefulsets.items.remove(statefulset)
 
     if args.up:
         if args.deployments:
