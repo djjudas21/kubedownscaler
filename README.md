@@ -4,6 +4,7 @@ Scales down Kubernetes Deployments and StatefulSets to 0 replicas, keeps note of
 of replicas in annotations, and scales everything back up to the original number of replicas.
 
 Can operate on a single namespace, or the entire cluster.
+Can operate only on Deployments and StatefulSets that use a specific StorageClass
 
 Ideal for performing a controlled shutdown, maintenance, etc.
 
@@ -21,7 +22,7 @@ Either `-d|--down` or `-u|--up` must be specified.
 
 ```
 usage: kubectl downscale [-h] (-d | -u) [--dry-run] [-n NAMESPACE] [--deployments | --no-deployments]
-               [--statefulsets | --no-statefulsets]
+               [--statefulsets | --no-statefulsets] [--storageclass STORAGECLASS]
 
 options:
   -h, --help            show this help message and exit
@@ -34,6 +35,8 @@ options:
                         scale Deployments (default: True)
   --statefulsets, --no-statefulsets
                         scale StatefulSets (default: True)
+  --storageclass STORAGECLASS
+                        only scale Deployments and StatefulSets that are consuming a specific StorageClass
 ```
 
 ## Build
