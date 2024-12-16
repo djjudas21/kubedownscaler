@@ -12,6 +12,12 @@ def annotate(api, kind: str, name: str, namespace: str, value: str):
     '''
     Annotate a kube resource with its original number of replicas
     '''
+    # Replace empty string with None, to cause it to be removed
+    if value == '':
+        value = None
+    else:
+        value = str(value)
+    
     body = {"metadata": {"annotations": {
         'kubescaledown/originalReplicas': str(value)}}}
 
@@ -93,6 +99,10 @@ def upscale(api, kind: str, obj, dry_run: bool):
         original_replicas = int(
             obj.metadata.annotations['kubescaledown/originalReplicas'])
     except IndexError:
+        return
+    except ValueError:
+        return
+    except KeyError:
         return
 
     # Remove the annotation, and scale back up
