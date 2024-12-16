@@ -8,6 +8,8 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from termcolor import cprint
 
+args = None
+
 def annotate(api, kind: str, name: str, namespace: str, value: str):
     '''
     Annotate a kube resource with its original number of replicas
@@ -19,7 +21,13 @@ def annotate(api, kind: str, name: str, namespace: str, value: str):
         value = str(value)
     
     body = {"metadata": {"annotations": {
-        'kubescaledown/originalReplicas': str(value)}}}
+        'kubescaledown/originalReplicas': value}}}
+
+    if args.verbose:
+        if value is None:
+            print(f"Removing annotation kubescaledown/originalReplicas from {kind} {namespace}/{name}")
+        else:
+            print(f"Annotating {kind} {namespace}/{name} with kubescaledown/originalReplicas: {value}")
 
     match kind:
         case "Deployment":
@@ -103,6 +111,9 @@ def upscale(api, kind: str, obj, dry_run: bool):
     namespace = obj.metadata.namespace
     name = obj.metadata.name
     replicas = int(obj.spec.replicas)
+    if args.verbose:
+        print(f"Getting original replica count from {kind} {namespace}/{name}")
+          
     try:
         original_replicas = int(
             obj.metadata.annotations['kubescaledown/originalReplicas'])
@@ -111,6 +122,8 @@ def upscale(api, kind: str, obj, dry_run: bool):
     except ValueError:
         return
     except KeyError:
+        if args.verbose:
+            print(f"{kind} {namespace}/{name} was not previously annotated")
         return
 
     # Remove the annotation, and scale back up
@@ -133,6 +146,8 @@ def main():
                        help="scale up to restore state", action='store_true')
     parser.add_argument(
         '--dry-run', help="don't actually scale anything", action='store_true')
+    parser.add_argument('-v', '--verbose',
+                        help="enable verbose output", action=argparse.BooleanOptionalAction)
     parser.add_argument('-n', '--namespace',
                         help="namespace to operate on", type=str)
     parser.add_argument("--deployments", help="scale Deployments",
@@ -141,6 +156,8 @@ def main():
                         default=True, action=argparse.BooleanOptionalAction)
     parser.add_argument("--storageclass", help="only scale pods that are consuming a specific storageclass",
                         type=str)
+    # pylint: disable=global-statement
+    global args
     args = parser.parse_args()
 
     # connect to cluster
@@ -151,7 +168,11 @@ def main():
     # Determine whether namespaced or global, and fetch list of Deployments
     if args.namespace:
         # do namespaced
+        if args.verbose:
+            print(f"Operating on namespace {args.namespace}")
         if args.deployments:
+            if args.verbose:
+                print(f"Getting deployments in namespace {args.namespace}")
             try:
                 deployments = apps_v1.list_namespaced_deployment(
                     namespace=args.namespace)
@@ -159,6 +180,8 @@ def main():
                 print(
                     f"Exception when calling AppsV1Api->list_namespaced_deployment: {e}\n")
         if args.statefulsets:
+            if args.verbose:
+                print(f"Getting statefulsets in namespace {args.namespace}")
             try:
                 statefulsets = apps_v1.list_namespaced_stateful_set(
                     namespace=args.namespace)
@@ -167,13 +190,19 @@ def main():
                     f"Exception when calling AppsV1Api->list_namespaced_stateful_set: {e}\n")
     else:
         # do global
+        if args.verbose:
+            print("Operating on all namespaces")
         if args.deployments:
+            if args.verbose:
+                print("Getting all deployments")
             try:
                 deployments = apps_v1.list_deployment_for_all_namespaces()
             except ApiException as e:
                 print(
                     f"Exception when calling AppsV1Api->list_deployment_for_all_namespaces: {e}\n")
         if args.statefulsets:
+            if args.verbose:
+                print("Getting all statefulsets")
             try:
                 statefulsets = apps_v1.list_stateful_set_for_all_namespaces()
             except ApiException as e:
@@ -183,8 +212,14 @@ def main():
     # remove any deployment or statefulset from the list that doesn't reference this storageclass
     if args.storageclass:
 
+        if args.verbose:
+            print(f"Checking deployments and statefulsets for storageclass {args.storageclass}")
+
+
         # for deployments, get the PVCs from the Deployment and get the SC from the PVC
         for deployment in deployments.items:
+            if args.verbose:
+                print(f"Working on deployment {deployment.metadata.name}/{deployment.metadata.namespace}")
             to_be_scaled = False
 
             # get full deployment details
@@ -235,16 +270,24 @@ def main():
     if args.up:
         if args.deployments:
             for deployment in deployments.items:
+                if args.verbose:
+                    print(f"Working on deployment {deployment.metadata.name}/{deployment.metadata.namespace}")
                 upscale(apps_v1, "Deployment", deployment, args.dry_run)
         if args.statefulsets:
             for statefulset in statefulsets.items:
+                if args.verbose:
+                    print(f"Working on statefulset {statefulset.metadata.name}/{statefulset.metadata.namespace}")
                 upscale(apps_v1, "StatefulSet", statefulset, args.dry_run)
     elif args.down:
         if args.deployments:
             for deployment in deployments.items:
+                if args.verbose:
+                    print(f"Working on deployment {deployment.metadata.name}/{deployment.metadata.namespace}")
                 downscale(apps_v1, "Deployment", deployment, args.dry_run)
         if args.statefulsets:
             for statefulset in statefulsets.items:
+                if args.verbose:
+                    print(f"Working on statefulset {statefulset.metadata.name}/{statefulset.metadata.namespace}")
                 downscale(apps_v1, "StatefulSet", statefulset, args.dry_run)
 
 if __name__ == '__main__':
