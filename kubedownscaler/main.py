@@ -6,7 +6,7 @@ and restore them to their original scale
 import argparse
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
-
+from termcolor import cprint
 
 def annotate(api, kind: str, name: str, namespace: str, value: str):
     '''
@@ -47,8 +47,16 @@ def scale(api, kind: str, name: str, namespace: str, from_replicas: int, to_repl
     '''
     Scale a kube resource to a new number of replicas
     '''
-    print(
-        f"Scaling {kind} {namespace}/{name} from {from_replicas} to {to_replicas} replicas")
+
+    if to_replicas > from_replicas:
+        colour = 'green'
+    elif to_replicas < from_replicas:
+        colour = 'red'
+    else:
+        colour = 'yellow'
+
+    cprint(
+        f"Scaling {kind} {namespace}/{name} from {from_replicas} to {to_replicas} replicas", colour)
 
     body = {"spec": {"replicas": to_replicas}}
 
