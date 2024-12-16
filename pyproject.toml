@@ -19,6 +19,7 @@ kubectl-downscale = 'kubedownscaler.main:main'
 python = "^3.10"
 kubernetes = "^19.15.0"
 argparse = "^1.4.0"
+termcolor = "^2.3.0"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.6.0"
