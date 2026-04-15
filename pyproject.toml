@@ -22,7 +22,7 @@ argparse = "^1.4.0"
 termcolor = "^2.3.0"
 
 [tool.poetry.dev-dependencies]
-autopep8 = "^1.6.0"
+autopep8 = "^2.0.0"
 pylint = "^2.11.1"
 
 [build-system]
