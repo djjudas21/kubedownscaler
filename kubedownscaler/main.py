@@ -184,6 +184,7 @@ def main():
     if args.storageclass:
 
         # for deployments, get the PVCs from the Deployment and get the SC from the PVC
+        # pylint: disable=possibly-used-before-assignment
         for deployment in deployments.items:
             to_be_scaled = False
 
@@ -213,6 +214,7 @@ def main():
                 deployments.items.remove(deployment)
 
         # for statefulsets, the SC is listed directly in the statefulset
+        # pylint: disable=possibly-used-before-assignment
         for statefulset in statefulsets.items:
             to_be_scaled = False
 
